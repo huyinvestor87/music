@@ -1,4 +1,4 @@
-import{harmony,motifA,motifB,answer}from'./composition-v4-data.js';
+import{harmony,motifA,motifB,answer}from'./composition-v4-data.js?v=5';
 const notes=[];const add=(hand,pitch,start,duration,velocity=.7)=>notes.push({hand,pitch,start,duration,velocity});
 const phrase=(pattern,t,v,lift=0)=>pattern.forEach(([p,s,d])=>{const q=lift?p.replace(/(\d)$/,(_,o)=>String(Math.min(6,+o+lift))):p;add('right',q,t+s,d,v)});
 function left(t,h,power){add('left',h.bass,t,1.15,.48+power*.18);if(power>.6)add('left',h.bass.replace(/(\d)$/,(_,o)=>String(+o+1)),t,.9,.48);const arp=[h.tones[0],h.tones[2],h.tones[1],h.tones[3],h.tones[0],h.tones[2],h.tones[1],h.tones[3]];arp.forEach((p,i)=>add('left',p,t+i*.5+.025,.44,.42+power*.18-(i%2?.05:0)))}
