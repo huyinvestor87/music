@@ -1,0 +1,15 @@
+import{composition}from'./composition.js';import{AudioEngine}from'./audio-engine.js';import{buildKeyboard,setKeyActive,drawRoll}from'./piano-ui.js';
+const $=s=>document.querySelector(s),engine=new AudioEngine(),keyboard=$('#pianoKeyboard');buildKeyboard(keyboard);$('#songTitle').textContent=composition.title;$('#songMeta').textContent=`${composition.key} · ${composition.timeSignature} · ${composition.tempo} BPM`;$('#tempoInput').value=composition.tempo;
+let tempo=composition.tempo,speed=1,position=0,playing=false,lastTs=0,nextIndex=0,raf=0,activeTimers=[];
+const secondsPerBeat=()=>60/(tempo*speed),totalSeconds=()=>composition.totalBeats*secondsPerBeat(),fmt=s=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
+function filtered(){const hand=$('#handSelect').value;return composition.notes.filter(n=>hand==='both'||n.hand===hand)}
+function resetIndex(){const ns=filtered();nextIndex=ns.findIndex(n=>n.start>=position);if(nextIndex<0)nextIndex=ns.length}
+function clearHighlights(){activeTimers.forEach(clearTimeout);activeTimers=[];keyboard.querySelectorAll('.key').forEach(k=>k.classList.remove('active-left','active-right'))}
+function updateUI(){const sec=position*secondsPerBeat();$('#currentTime').textContent=fmt(sec);$('#totalTime').textContent=fmt(totalSeconds());$('#seekBar').value=Math.round(position/composition.totalBeats*1000)}
+async function play(){await engine.init();$('#audioStatus').textContent='Audio ready';if(position>=composition.totalBeats)position=0;playing=true;lastTs=performance.now();resetIndex();cancelAnimationFrame(raf);raf=requestAnimationFrame(tick)}
+function tick(ts){if(!playing)return;const dt=(ts-lastTs)/1000;lastTs=ts;position+=dt/secondsPerBeat();const ns=filtered();while(nextIndex<ns.length&&ns[nextIndex].start<=position+.025){const n=ns[nextIndex++];if(n.start>=position-.12){const dur=n.duration*secondsPerBeat();engine.playNote(n.pitch,dur,n.velocity);setKeyActive(keyboard,n.pitch,n.hand,true);activeTimers.push(setTimeout(()=>setKeyActive(keyboard,n.pitch,n.hand,false),dur*1000))}}if(position>=composition.totalBeats){if($('#loopToggle').checked){position=0;resetIndex()}else{stop();return}}updateUI();raf=requestAnimationFrame(tick)}
+function pause(){playing=false;cancelAnimationFrame(raf);engine.stopAll();clearHighlights()}
+function stop(){pause();position=0;resetIndex();updateUI()}
+$('#playBtn').onclick=play;$('#pauseBtn').onclick=pause;$('#stopBtn').onclick=stop;$('#restartBtn').onclick=()=>{position=0;resetIndex();if(!playing)play();updateUI()};
+$('#tempoInput').oninput=e=>{tempo=Number(e.target.value);$('#tempoValue').textContent=`${tempo} BPM`;updateUI()};$('#speedSelect').onchange=e=>{speed=Number(e.target.value);updateUI()};$('#volumeInput').oninput=e=>engine.setVolume(e.target.value);$('#handSelect').onchange=()=>{engine.stopAll();clearHighlights();resetIndex()};$('#seekBar').oninput=e=>{position=Number(e.target.value)/1000*composition.totalBeats;engine.stopAll();clearHighlights();resetIndex();updateUI()};
+window.addEventListener('resize',()=>drawRoll($('#pianoRoll'),composition));drawRoll($('#pianoRoll'),composition);updateUI();
