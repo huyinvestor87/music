@@ -1,25 +1,12 @@
-// V2: an original through-composed piano sketch. Musical time is stored in beats.
+import{harmony,motifA,motifB,answer}from'./composition-v4-data.js';
 const notes=[];const add=(hand,pitch,start,duration,velocity=.7)=>notes.push({hand,pitch,start,duration,velocity});
-const H=[
- {bass:'F#2',tones:['C#3','F#3','A3']},{bass:'C#2',tones:['C#3','E3','G#3']},{bass:'D2',tones:['A2','D3','F#3']},{bass:'A2',tones:['A2','C#3','E3']},
- {bass:'B2',tones:['B2','D3','F#3']},{bass:'F#2',tones:['C#3','F#3','A3']},{bass:'D2',tones:['A2','D3','F#3']},{bass:'C#2',tones:['G#2','C#3','E3']}
-];
-const themes=[
- ['C#5','A4','F#4','A4','C#5','E5','C#5','A4'],['G#4','C#5','E5','D5','C#5','G#4','E4','G#4'],
- ['A4','F#4','A4','D5','C#5','A4','F#4','E4'],['E4','A4','C#5','E5','C#5','B4','A4','G#4'],
- ['F#4','B4','D5','F#5','D5','B4','A4','F#4'],['A4','C#5','F#5','E5','C#5','A4','G#4','A4']
-];
-const bars=60;
-for(let bar=0;bar<bars;bar++){
- const t=bar*4,h=H[bar%8];let sec=bar<6?'intro':bar<22?'theme':bar<38?'develop':bar<50?'climax':'outro';
- const lv={intro:.34,theme:.44,develop:.53,climax:.68,outro:.32}[sec];add('left',h.bass,t,sec==='outro'?2.2:1.15,lv);
- const arp=sec==='intro'||sec==='outro'?[h.tones[0],h.tones[1],h.tones[2],h.tones[1]]:[h.tones[0],h.tones[1],h.tones[2],h.tones[1],h.tones[0],h.tones[1],h.tones[2],h.tones[1]];
- const step=4/arp.length;arp.forEach((p,i)=>add('left',p,t+i*step,step*.88,lv*(i%2?.86:1)));
- if(sec==='intro'&&bar<2){add('right',bar===0?'F#4':'A4',t+.15,2.7,.38);add('right',bar===0?'C#5':'C#5',t+2.9,.8,.34);continue}
- let pat=themes[(bar+Math.floor(bar/4))%themes.length];const rv={intro:.42,theme:.57,develop:.67,climax:.82,outro:.4}[sec];pat.forEach((p,i)=>{if(sec==='outro'&&i%2===1)return;let pitch=p;if(sec==='climax'&&i>=3)pitch=p.replace(/(\d)$/,(_,o)=>String(Math.min(6,+o+1)));const breath=(i===3||i===7)?.035:0;add('right',pitch,t+i*.5+breath,sec==='outro'?.8:.43,rv+(i===0?.045:0))});
- if(sec==='develop'&&bar%4===3){add('right','E5',t+2,1.7,.66);add('right','C#5',t+2,1.5,.59)}
- if(sec==='climax'){if(bar%2===0){add('right','F#5',t,1.8,.78);add('right','C#6',t,1.65,.7)}if(bar>=46){add('left','F#3',t+2,1.5,.64)}}
-}
-const end=bars*4;add('left','F#2',end,4,.3);add('left','C#3',end,4,.27);add('left','F#3',end,4,.25);add('right','C#5',end+.1,1.4,.38);add('right','A4',end+1.45,1.1,.34);add('right','F#4',end+2.5,3.5,.3);
-notes.sort((a,b)=>a.start-b.start);
-export const composition={title:'After the Quiet Rain · V2',tempo:76,timeSignature:'4/4',key:'F# minor',totalBeats:end+6,notes};
+const phrase=(pattern,t,v,lift=0)=>pattern.forEach(([p,s,d])=>{const q=lift?p.replace(/(\d)$/,(_,o)=>String(Math.min(6,+o+lift))):p;add('right',q,t+s,d,v*(s<.3?1.04:.96))});
+function left(t,h,section){const v={intro:.28,A:.4,B:.48,build:.57,climax:.69,outro:.27}[section];add('left',h.bass,t,section==='outro'?2:1.2,v);let p=section==='intro'||section==='outro'?[h.tones[0],h.tones[1],h.tones[2],h.tones[3]]:[h.tones[0],h.tones[1],h.tones[2],h.tones[3],h.tones[2],h.tones[1],h.tones[2],h.tones[3]];if(section==='climax'){const oct=h.bass.replace(/(\d)$/,(_,o)=>String(+o+1));add('left',oct,t,.95,v*.86)}const step=4/p.length;p.forEach((n,i)=>add('left',n,t+i*step+.03,step*.86,v*(i%2?.8:.91)))}
+const bars=64;for(let bar=0;bar<bars;bar++){const t=bar*4,h=harmony[bar%8],section=bar<6?'intro':bar<24?'A':bar<36?'B':bar<46?'build':bar<56?'climax':'outro';left(t,h,section);
+ if(section==='intro'){if(bar===0){add('right','F#4',t+.35,2.1,.3);add('right','A4',t+2.7,.85,.32)}else if(bar===2)phrase(motifA,t,.38);else if(bar===4)phrase(answer,t,.4);continue}
+ if(section==='A'){const c=(bar-6)%4;if(c===0)phrase(motifA,t,.54);else if(c===1)phrase(motifB,t,.51);else if(c===2)phrase(answer,t,.56);else{add('right','C#5',t+.2,.65,.5);add('right','B4',t+1.05,.55,.47);add('right','A4',t+1.8,.8,.5);add('right','F#4',t+2.85,1,.46)}}
+ if(section==='B'){if(bar%2===0){phrase(answer,t,.62);add('right','A5',t+3.1,.65,.57)}else phrase(motifA,t,.61)}
+ if(section==='build'){const v=.64+(bar-36)*.012;phrase(bar%2?answer:motifA,t,v,bar>=42?1:0)}
+ if(section==='climax'){const v=.79+(bar-46)*.009;phrase(bar%2?answer:motifA,t,v,1);if(bar%2===0){add('right','F#5',t,.95,v*.86);add('right','C#6',t,.9,v*.78)}if(bar>=52){add('right','A5',t+2,1.35,v*.82);add('right','E6',t+2,1.15,v*.7)}}
+ if(section==='outro'){if(bar===56)phrase(motifA,t,.4);else if(bar===58)phrase(answer,t,.36);else if(bar===60){add('right','C#5',t+.3,1.25,.34);add('right','A4',t+1.8,1.1,.31);add('right','F#4',t+3,1,.28)}else if(bar===62)add('right','F#4',t+.5,2.8,.25)}}
+const end=bars*4;add('left','F#2',end,5,.22);add('left','C#3',end+.05,4.8,.2);add('left','F#3',end+.1,4.6,.19);add('right','A4',end+.25,1.2,.27);add('right','C#5',end+1.5,1.1,.25);add('right','F#5',end+2.7,3.4,.22);notes.sort((a,b)=>a.start-b.start);export const composition={title:'After the Quiet Rain · V4',tempo:76,timeSignature:'4/4',key:'F# minor',totalBeats:end+7,notes};
